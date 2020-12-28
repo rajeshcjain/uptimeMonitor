@@ -1,0 +1,134 @@
+Pre-requisite 
+Java 8.0.
+
+MariaDB is being used for the storage of the data
+
+Please run the below commands to start the docker
+
+docker run --name xebia-mariadb -p 3307:3306 -e MYSQL_ROOT_PASSWORD=xebia -d mariadb/server:10.4
+
+docker exec -it xebia-mariadb bash
+
+create the schema as mentioned in schema.sql
+
+######################################
+
+
+There are 2 module which are developed here.
+1). uptimeMonitor
+2). Monitoring
+
+The role of the uptimeMonitor is to provide the facility for updating the system about the checkpoints.There 
+can only be one url registered with the system.
+
+1st request to create a new entry or update a existing check point the system.
+
+curl -X POST \
+  http://localhost:8080/api/v1/uptime \
+  -H 'cache-control: no-cache' \
+  -H 'content-type: application/json' \
+  -H 'postman-token: 32f430dc-6b62-de0a-13c8-a55cf924d758' \
+  -d '{
+	"name":"chk1",
+	"url":"google.com",
+	"freq":2,
+	"time_units":"hours"
+}'
+
+2nd is to fetch all the check points
+
+curl -X GET \
+  http://localhost:8080/api/v1/uptime \
+  -H 'cache-control: no-cache' \
+  -H 'content-type: application/json' \
+  -H 'postman-token: 64d47f79-6483-4cd7-2295-79dc1d939b86'
+  
+  OutPut
+  
+  [
+    {
+        "name": "chk1",
+        "url": "google.com",
+        "freq": 2,
+        "units": "hours",
+        "status": "inactive"
+    },
+    {
+        "name": "chk2",
+        "url": "riviers.com",
+        "freq": 2,
+        "units": "minutes",
+        "status": "active"
+    },
+    {
+        "name": "chk1",
+        "url": "https://google.com",
+        "freq": 1,
+        "units": "minutes",
+        "status": "active"
+    }
+]
+
+The other variation in it is where we try to get it based on the filter which could be all/name/freq(interval)
+
+curl -X GET \
+  'http://localhost:8080/api/v1/uptime?checkval=chk1&filter=name' \
+  -H 'cache-control: no-cache' \
+  -H 'content-type: application/json' \
+  -H 'postman-token: 9689db0c-8432-873e-c5d0-66de30268135'
+  
+3rd is to change the status of a check point (active->inactive/inactive->active)
+
+curl -X PUT \
+  http://localhost:8080/api/v1/uptime/status/inactive \
+  -H 'cache-control: no-cache' \
+  -H 'content-type: application/json' \
+  -H 'postman-token: 4c0a7640-8b59-0d7f-f59f-3a0aa27e5549' \
+  -d '{
+	"name":"chk1",
+	"url":"google.com",
+	"freq":2,
+	"time_units":"hours"
+}'
+
+4th one is to getting all the details related with the check point based on the url
+
+curl -X POST \
+  http://localhost:8080/api/v1/uptime/url \
+  -H 'cache-control: no-cache' \
+  -H 'content-type: application/json' \
+  -H 'postman-token: e6f25d0b-7dea-e3e3-87de-58bdddcce8ee' \
+  -d '{
+	"url":"google.com"
+}'
+
+Output
+
+{
+    "id": 1,
+    "name": "chk1",
+    "url": "google.com",
+    "freq": 2,
+    "units": "hours",
+    "status": "inactive",
+    "uptime": 0,
+    "downtime": 7
+} 
+
+Monitoring.
+----------
+
+The 2nd Part comes with the Monitoring which reads the data from the db and schedule the tasks to know the uptime of the tasks.These
+also update the tasks about the total duration of the site up/down.
+
+When the user mark some task as inactive then that task will be removed from the queue after 30 seconds.
+
+when a new task will be added in system then that will be picked in the next 30 seconds cycle.
+
+On the boot up it reads all the active tasks from the DB and schedule them all based on there freq.
+
+
+
+
+
+
